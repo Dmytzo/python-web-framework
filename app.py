@@ -21,3 +21,8 @@ def greeting(request, response, name):
 class BooksResource:
     def get(self, req, resp):
         resp.text = "Books Page"
+
+
+@app.route("/template")
+def template_handler(req, resp):
+    resp.body = app.template("index.html", context={"name": "dmytzo", "title": "python"}).encode()

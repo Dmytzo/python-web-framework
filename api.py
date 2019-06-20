@@ -1,18 +1,28 @@
+import inspect
+import os
+
 from webob import Request, Response
 from parse import parse
-import inspect
+from requests import Session as RequestsSession
+from wsgiadapter import WSGIAdapter as RequestsWSGIAdapter
+from jinja2 import Environment, FileSystemLoader
 
 
 class API:
-    def __init__(self):
+    def __init__(self, templates_dir="templates"):
         self.routes = {}
 
-    def route(self, path):
+        self.templates_env = Environment(loader=FileSystemLoader(os.path.abspath(templates_dir)))
+
+    def add_route(self, path, handler):
         assert path not in self.routes, "Such route already exists."
 
+        self.routes[path] = handler
+
+    def route(self, path):
 
         def wrapper(handler):
-            self.routes[path] = handler
+            self.add_route(path, handler)
             return handler
 
         return wrapper
@@ -52,3 +62,14 @@ class API:
                 return handler, parse_result.named
 
         return None, None
+
+    def template(self, template_name, context=None):
+        if not context:
+            context = {}
+
+        return self.templates_env.get_template(template_name).render(**context)
+
+    def test_session(self, base_url="http://testserver"):
+        session = RequestsSession()
+        session.mount(prefix=base_url, adapter=RequestsWSGIAdapter(self))
+        return session
